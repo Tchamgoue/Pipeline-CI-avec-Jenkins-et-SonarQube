@@ -1,15 +1,19 @@
 pipeline {
-    agent any   // Utilise n'importe quel agent Jenkins disponible
+    agent {
+        docker {
+            image 'python:3.12-slim'
+            // Donne accès au socket Docker si besoin (optionnel ici)
+            args '--user root'
+        }
+    }
 
     environment {
-        SONAR_SCANNER_HOME = tool 'SonarQube Scanner'  // Référence l'outil déclaré dans Jenkins
+        SONAR_SCANNER_HOME = tool 'SonarQube Scanner'
     }
 
     stages {
 
         stage('Checkout') {
-            // Jenkins clone automatiquement le repo ici
-            // Cette étape est souvent implicite mais on la rend visible
             steps {
                 echo 'Code récupéré depuis GitHub'
             }
@@ -21,7 +25,7 @@ pipeline {
                     python3 -m venv venv
                     . venv/bin/activate
                     pip install -r requirements.txt
-                    pip install coverage   # Pour mesurer la couverture de tests
+                    pip install coverage
                 '''
             }
         }
@@ -31,12 +35,11 @@ pipeline {
                 sh '''
                     . venv/bin/activate
                     coverage run manage.py test
-                    coverage xml -o coverage.xml   # Génère un rapport XML pour SonarQube
+                    coverage xml -o coverage.xml
                 '''
             }
             post {
                 always {
-                    // Même en cas d'échec, on publie les résultats de test
                     echo 'Tests terminés'
                 }
                 failure {
@@ -48,7 +51,6 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube-local') {
-                    // withSonarQubeEnv injecte automatiquement l'URL et le token
                     sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner"
                 }
             }
@@ -57,8 +59,6 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
-                    // Attend que SonarQube ait fini son analyse
-                    // et échoue le pipeline si les seuils de qualité ne sont pas atteints
                     waitForQualityGate abortPipeline: true
                 }
             }
