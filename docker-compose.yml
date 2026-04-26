@@ -3,13 +3,15 @@ version: '3.8'
 services:
 
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
     container_name: jenkins
     ports:
-      - "8080:8080"       # Interface web Jenkins
-      - "50000:50000"     # Communication avec les agents Jenkins
+      - "8080:8080"
+      - "50000:50000"
     volumes:
-      - jenkins_home:/var/jenkins_home   # Persistance des données Jenkins
+      - jenkins_home:/var/jenkins_home
     networks:
       - devops-net
 
@@ -17,9 +19,9 @@ services:
     image: sonarqube:community
     container_name: sonarqube
     ports:
-      - "9000:9000"       # Interface web SonarQube
+      - "9000:9000"
     environment:
-      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true   # Désactive un check mémoire strict (utile en local)
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
     volumes:
       - sonar_data:/opt/sonarqube/data
       - sonar_logs:/opt/sonarqube/logs
